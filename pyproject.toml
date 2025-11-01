@@ -5,7 +5,6 @@ description = "Collection of handy utils written in Python 3"
 authors = [{ name = "ak1ra", email = "git@ak1ra.xyz" }]
 dependencies = [
     "pathspec>=0.12.1",
-    "python-debian>=1.0.1",
     "pyzstd>=0.17.0",
     "chardet>=5.2.0",
 ]
