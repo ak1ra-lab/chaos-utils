@@ -7,6 +7,7 @@ dependencies = [
     "pathspec>=0.12.1",
     "pyzstd>=0.17.0",
     "chardet>=5.2.0",
+    "httpx>=0.28.1",
 ]
 requires-python = ">=3.11"
 classifiers = [

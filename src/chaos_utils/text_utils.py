@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 from pathlib import Path
@@ -46,3 +47,8 @@ def read_toml(filepath: Path) -> Union[dict, list, None]:
         data = tomllib.load(f)
 
     return data
+
+
+def b64decode(data: str):
+    suffix = "=" * (4 - len(data) % 4)
+    return base64.urlsafe_b64decode(data + suffix).decode("utf-8")
