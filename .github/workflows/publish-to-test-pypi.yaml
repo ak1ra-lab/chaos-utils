@@ -39,7 +39,9 @@ jobs:
         run: uv run pytest -v tests/
 
       - name: Build a binary wheel and a source tarball
-        run: uv build -v
+        run: |-
+          git tag $(git describe --tags | cut -d- -f1,2)
+          uv build -v
 
       - name: Publish package distributions to Test PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
