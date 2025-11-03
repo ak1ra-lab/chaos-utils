@@ -6,7 +6,25 @@ from pathspec import GitIgnoreSpec
 
 
 def load_directory_gitignore_specs(directory: Path) -> Dict[Path, GitIgnoreSpec]:
-    """Recursively load all .gitignore files and return a mapping of paths to GitIgnoreSpec"""
+    """
+    Load all ``.gitignore`` files found under ``directory``.
+
+    The returned mapping maps the directory that contains each ``.gitignore``
+    file to a ``GitIgnoreSpec`` object (from the ``pathspec`` package).
+
+    Args:
+        directory: Root directory to search recursively for ``.gitignore`` files.
+
+    Returns:
+        A dict mapping the parent directory of each discovered ``.gitignore``
+        file to a ``GitIgnoreSpec`` that can be used to test whether paths
+        relative to that directory match ignore patterns.
+
+    Example:
+        >>> specs = load_directory_gitignore_specs(Path("/my/repo"))
+        >>> repo_root_spec = specs.get(Path('/my/repo'))
+        >>> bool(repo_root_spec.match_file('build/'))
+    """
     specs = {}
 
     for gitignore_path in directory.rglob(".gitignore"):
@@ -18,7 +36,24 @@ def load_directory_gitignore_specs(directory: Path) -> Dict[Path, GitIgnoreSpec]
 
 
 def should_path_ignore(path: Path, specs: Dict[Path, GitIgnoreSpec]) -> bool:
-    """Checks if a path should be ignored"""
+    """
+    Return True if ``path`` should be ignored by git rules.
+
+    This function checks for two things:
+    - If any path component equals ``.git`` the path is considered ignored.
+    - For each discovered ``.gitignore`` specification, if the specification
+      applies to an ancestor directory of ``path`` then the path is tested
+      relative to that ancestor and matched via the spec.
+
+    Args:
+        path: A file or directory path to test.
+        specs: Mapping from directories (parents of ``.gitignore`` files) to
+            their compiled ``GitIgnoreSpec`` objects.
+
+    Returns:
+        True if the path should be ignored according to any applicable
+        ``.gitignore`` spec or because it is inside a ``.git`` directory.
+    """
     if any(part == ".git" for part in path.parts):
         return True
 
@@ -38,6 +73,19 @@ def should_path_ignore(path: Path, specs: Dict[Path, GitIgnoreSpec]) -> bool:
 
 
 def path_walk(directory: Path) -> Iterator[Tuple[Path, Path, Path]]:
+    """
+    Lightweight wrapper around ``os.walk`` that yields Path objects.
+
+    Yields tuples ``(root_path, dirs, files)`` where ``root_path`` is a
+    ``Path`` instance and ``dirs``/``files`` are lists of ``Path`` objects
+    representing the directory entries in that root.
+
+    Args:
+        directory: The root directory to walk.
+
+    Yields:
+        Tuples of (root_path, dirs, files).
+    """
     for root, dirnames, filenames in os.walk(directory):
         root_path = Path(root)
         dirs = [Path(d) for d in dirnames]
@@ -49,7 +97,20 @@ def path_walk(directory: Path) -> Iterator[Tuple[Path, Path, Path]]:
 def path_walk_respect_gitignore(
     directory: Path,
 ) -> Iterator[Tuple[Path, Path, Path]]:
-    """Recursively traverse directories, respecting all levels of .gitignore files"""
+    """
+    Walk directory tree while applying discovered ``.gitignore`` rules.
+
+    This function behaves like :func:`path_walk` but filters out any files or
+    directories that would be ignored according to any ``.gitignore`` files
+    found under ``directory``.
+
+    Args:
+        directory: Root directory to traverse.
+
+    Yields:
+        Tuples of (root_path, dirs, files) where ``dirs`` and ``files`` have
+        been filtered to exclude ignored entries.
+    """
     specs = load_directory_gitignore_specs(directory)
     for root, dirnames, filenames in os.walk(directory):
         root_path = Path(root)
@@ -62,7 +123,18 @@ def path_walk_respect_gitignore(
 def iter_files_with_respect_gitignore(
     directory: Path, respect_gitignore: bool = False
 ) -> Iterator[Path]:
-    """Generator that yields all files in a directory recursively, with options."""
+    """
+    Yield files under ``directory`` recursively, optionally respecting
+    ``.gitignore`` rules.
+
+    Args:
+        directory: Root directory to iterate.
+        respect_gitignore: If True, discovered ``.gitignore`` files are
+            respected and ignored files are skipped.
+
+    Yields:
+        ``Path`` objects for every file discovered.
+    """
     if respect_gitignore:
         walk = path_walk_respect_gitignore
     else:
@@ -76,7 +148,18 @@ def iter_files_with_respect_gitignore(
 def iter_dirs_with_respect_gitignore(
     directory: Path, respect_gitignore: bool = False
 ) -> Iterator[Path]:
-    """Generator that yields all dirs in a directory recursively, with options."""
+    """
+    Yield directories under ``directory`` recursively, optionally
+    respecting ``.gitignore`` rules.
+
+    Args:
+        directory: Root directory to iterate.
+        respect_gitignore: If True, discovered ``.gitignore`` files are
+            respected and ignored directories are skipped.
+
+    Yields:
+        ``Path`` objects for every directory discovered.
+    """
     if respect_gitignore:
         walk = path_walk_respect_gitignore
     else:
@@ -88,6 +171,17 @@ def iter_dirs_with_respect_gitignore(
 
 
 def glob_respect_gitignore(directory: Path, glob: str = "*") -> Iterator[Path]:
+    """
+    Yield entries matching ``glob`` at top level of ``directory`` while
+    skipping those ignored by any applicable ``.gitignore`` files.
+
+    Args:
+        directory: Directory to glob in.
+        glob: Glob pattern (defaults to "*").
+
+    Yields:
+        Paths that match the glob and are not ignored.
+    """
     specs = load_directory_gitignore_specs(directory)
     for file in directory.glob(glob):
         if not should_path_ignore(file, specs):
@@ -95,6 +189,17 @@ def glob_respect_gitignore(directory: Path, glob: str = "*") -> Iterator[Path]:
 
 
 def rglob_respect_gitignore(directory: Path, glob: str = "*") -> Iterator[Path]:
+    """
+    Recursively glob for files under ``directory`` while skipping ignored
+    paths according to discovered ``.gitignore`` files.
+
+    Args:
+        directory: Root directory to search.
+        glob: Glob pattern for recursive search (defaults to "*").
+
+    Yields:
+        Matching ``Path`` objects that are not ignored.
+    """
     specs = load_directory_gitignore_specs(directory)
     for file in directory.rglob(glob):
         if not should_path_ignore(file, specs):

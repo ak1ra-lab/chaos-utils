@@ -14,9 +14,39 @@ def deep_merge(
     deepcopy_first: bool = True,
 ) -> dict[str, Any]:
     """
-    Iteratively merge d2 into a shallow copy of d1 using a stack if deepcopy_first is False.
-    If deepcopy_first is True (default), make a deep copy of d1 first to avoid sharing
-    any nested mutable objects.
+    Recursively merge two mappings and return the merged result.
+
+    This function returns a new dict containing the keys from ``d1`` updated by
+    the keys from ``d2``. When a key exists in both mappings and both values
+    are mapping types (collections.abc.Mapping), the merge is performed
+    recursively so nested mappings are merged instead of replaced.
+
+    The merge is implemented iteratively using a stack to avoid recursion
+    limits. By default a deep copy of ``d1`` is made first to guarantee that
+    the returned mapping shares no nested mutable structures with the original
+    ``d1``. To optimize for performance and avoid copying, set
+    ``deepcopy_first=False`` which will start from a shallow copy of ``d1``
+    instead (note: nested mutable objects from ``d1`` may be shared in that
+    case).
+
+    Args:
+        d1: The base mapping whose values will be updated.
+        d2: The mapping to merge into ``d1``. Values in ``d2`` take precedence
+            over values in ``d1`` when keys collide.
+        deepcopy_first: If True (default) produce a deep copy of ``d1`` before
+            merging. If False, use a shallow copy of ``d1`` which is faster
+            but may share nested mutable objects with the original.
+
+    Returns:
+        A new dict representing the merged mapping.
+
+    Examples:
+        >>> deep_merge({"a": 1, "b": {"x": 1}}, {"b": {"y": 2}})
+        {'a': 1, 'b': {'x': 1, 'y': 2}}
+
+    Notes:
+        Non-mapping values are replaced by values from ``d2``.
+        Sequences and other non-mapping iterables are not merged element-wise.
     """
     merged: dict[str, Any] = deepcopy(d1) if deepcopy_first else d1.copy()
     # stack contains pairs of (target_dict, source_dict)

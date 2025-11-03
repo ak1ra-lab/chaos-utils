@@ -9,6 +9,21 @@ logging_dir = Path(f"~/.local/state/{__package__}/log").expanduser()
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord):
+        """Format a LogRecord as a JSON string.
+
+        The returned value is a JSON-encoded object containing the timestamp,
+        level, message and common record metadata. If exception information is
+        present it will be included as a string under ``exc_info``. Any extra
+        attributes supplied to the logging call (commonly passed via the
+        ``extra`` parameter) are merged into the produced JSON object.
+
+        Args:
+            record: The :class:`logging.LogRecord` to format.
+
+        Returns:
+            A JSON string representing the log record.
+        """
+
         log_record = {
             "timestamp": self.formatTime(record, self.datefmt),
             "level": record.levelname,
@@ -37,10 +52,18 @@ def setup_logger(
     file_logging: bool = False,
 ) -> logging.Logger:
     """
-    Setup root logger,
-    Can only be configured once in program entrypoint
+    Configure and return the root logger for the process.
 
-    https://rednafi.com/python/no-hijack-root-logger/
+    Args:
+        name: The name of the logger to return (usually ``__name__`` of the
+            caller module).
+        level: The default logging level to set on the root logger if not in
+            debug mode. Default is ``logging.INFO``.
+        file_logging: If True, enable rotating file logging to
+            ``~/.local/state/<package>/log/<name>.log``.
+
+    Returns:
+        A configured :class:`logging.Logger` instance for ``name``.
     """
     logger = logging.getLogger()
 
@@ -76,11 +99,23 @@ def setup_json_logger(
     level: int = logging.INFO,
     file_logging: bool = False,
 ) -> logging.Logger:
-    """
-    Setup root logger in JSON format,
-    Can only be configured once in program entrypoint
+    """Configure and return the root logger that emits JSON-formatted logs.
 
-    https://rednafi.com/python/no-hijack-root-logger/
+    This is identical to :func:`setup_logger` except that any file handler
+    created will use :class:`JsonFormatter` so persisted logs are JSON lines
+    (``.jsonl``). A console handler is still attached which prints the
+    message portion for readability.
+
+    Args:
+        name: The name of the logger to return (usually ``__name__`` of the
+            caller module).
+        level: The default logging level to set on the root logger if not in
+            debug mode. Default is ``logging.INFO``.
+        file_logging: If True, enable rotating file logging to
+            ``~/.local/state/<package>/log/<name>.jsonl``.
+
+    Returns:
+        A configured :class:`logging.Logger` instance.
     """
     logger = logging.getLogger()
 
