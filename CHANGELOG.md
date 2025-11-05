@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2025-11-05
+
+### 🚀 Features
+
+- impl dingtalk.py and test_dingtalk.py
+- impl wechat.py and test_wechat.py
+
+### 📚 Documentation
+
+- impl docstring
+
+### ⚙️ Miscellaneous Tasks
+
+- remove nox, add ruff.sh
+- remove http_utils.py
+- bump version
+
+## [0.1.2] - 2025-11-01
+
+### ⚙️ Miscellaneous Tasks
+
+- fix uv build step
+- impl http_utils.py
+
+## [0.1.1] - 2025-11-01
+
+### ⚙️ Miscellaneous Tasks
+
+- update pyproject.toml
+
 ## [0.1.0] - 2025-11-01
 
 ### 🚀 Features
