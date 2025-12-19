@@ -31,7 +31,22 @@ def detect_encoding(filepath: Path, num_bytes: int = 4096) -> str:
         raw_data = f.read(num_bytes)
     result = chardet.detect(raw_data)
     logger.debug("Detected encoding for %s: %s", filepath, result)
-    return result.get("encoding")
+
+    # If confidence is low, try UTF-8 first as it's most common
+    encoding = result.get("encoding")
+    confidence = result.get("confidence", 0)
+
+    if confidence < 0.9 and encoding and encoding.lower() not in ["utf-8", "ascii"]:
+        try:
+            raw_data.decode("utf-8")
+            logger.debug(
+                "Low confidence (%s), validated UTF-8 for %s", confidence, filepath
+            )
+            return "utf-8"
+        except UnicodeDecodeError:
+            pass
+
+    return encoding
 
 
 def iter_filepath_lines(filepath: Path):
