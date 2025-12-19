@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2025-12-19
+
+### 🚀 Features
+
+- impl telegram.py and test_telegram.py
+
+### 🐛 Bug Fixes
+
+- enhance encoding detection with UTF-8 validation
+
+### ⚙️ Miscellaneous Tasks
+
+- bump version
+
 ## [0.2.0] - 2025-11-05
 
 ### 🚀 Features
