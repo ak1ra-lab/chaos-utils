@@ -10,41 +10,55 @@ import tomllib
 logger = logging.getLogger(__name__)
 
 
-def detect_encoding(filepath: Path, num_bytes: int = 4096) -> str:
+def detect_encoding(filepath: Path, num_bytes: int = 8192) -> str:
     """
     Detect the character encoding of a file.
 
-    This helper reads up to ``num_bytes`` of the file in binary mode and
-    uses :mod:`chardet` to guess an encoding. It returns the string name of
-    the detected encoding (for example ``"utf-8"``) or ``None`` if the
-    detector could not determine an encoding.
+    This helper tries UTF-8 first (most common), then uses :mod:`chardet`
+    to guess an encoding. For low-confidence results, it will try reading
+    more data to improve accuracy.
 
     Args:
         filepath: Path to the file to probe.
-        num_bytes: Maximum number of bytes to read from the start of the
-            file for detection (defaults to 4096).
+        num_bytes: Initial number of bytes to read from the start of the
+            file for detection (defaults to 8192).
 
     Returns:
         The name of the detected encoding, or ``None`` if unknown.
     """
+    # Try UTF-8 first with a reasonable chunk size
+    max_utf8_probe = min(num_bytes * 4, 65536)  # up to 64KB
+
     with open(filepath, "rb") as f:
-        raw_data = f.read(num_bytes)
-    result = chardet.detect(raw_data)
+        raw_data = f.read(max_utf8_probe)
+
+    # Priority 1: Try UTF-8 (most common encoding)
+    try:
+        raw_data.decode("utf-8")
+        logger.debug("Validated UTF-8 encoding for %s", filepath)
+        return "utf-8"
+    except UnicodeDecodeError:
+        logger.debug("UTF-8 validation failed for %s, using chardet", filepath)
+
+    # Priority 2: Use chardet on initial chunk
+    initial_data = raw_data[:num_bytes]
+    result = chardet.detect(initial_data)
     logger.debug("Detected encoding for %s: %s", filepath, result)
 
-    # If confidence is low, try UTF-8 first as it's most common
     encoding = result.get("encoding")
     confidence = result.get("confidence", 0)
 
-    if confidence < 0.9 and encoding and encoding.lower() not in ["utf-8", "ascii"]:
-        try:
-            raw_data.decode("utf-8")
-            logger.debug(
-                "Low confidence (%s), validated UTF-8 for %s", confidence, filepath
-            )
-            return "utf-8"
-        except UnicodeDecodeError:
-            pass
+    # If confidence is low and we have more data, try with larger sample
+    if confidence < 0.9 and len(raw_data) > num_bytes:
+        logger.debug(
+            "Low confidence (%s), retrying with more data for %s",
+            confidence,
+            filepath,
+        )
+        result_extended = chardet.detect(raw_data)
+        if result_extended.get("confidence", 0) > confidence:
+            logger.debug("Improved detection with more data: %s", result_extended)
+            encoding = result_extended.get("encoding")
 
     return encoding
 
