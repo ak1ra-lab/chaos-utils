@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+import httpx
 import pytest
 
 from chaos_utils.dingtalk import DingTalkBot
@@ -87,3 +88,40 @@ def test_send_markdown_without_at(mock_post, bot):
     mock_post.assert_called_once()
     args, kwargs = mock_post.call_args
     assert "at" not in kwargs["json"]
+
+
+# ---------------------------------------------------------------------------
+# Error / exception paths
+# ---------------------------------------------------------------------------
+
+
+def test_generate_signature_failure_propagates(bot):
+    """If hmac.new raises, _generate_signature should propagate the error."""
+    with patch("chaos_utils.dingtalk.hmac.new", side_effect=RuntimeError("hmac fail")):
+        with pytest.raises(RuntimeError, match="hmac fail"):
+            bot._generate_signature()
+
+
+def test_send_message_when_signature_fails(bot):
+    """If _generate_signature raises, _send_message returns an error dict."""
+    with patch.object(bot, "_generate_signature", side_effect=ValueError("sig error")):
+        resp = bot._send_message("text", {"content": "hi"})
+    assert resp["errcode"] == -1
+    assert "sig error" in resp["errmsg"]
+
+
+@patch("httpx.post", side_effect=httpx.RequestError("connection refused"))
+def test_send_message_request_error(mock_post, bot):
+    """httpx.RequestError during POST returns an error dict."""
+    resp = bot._send_message("text", {"content": "hi"})
+    assert resp["errcode"] == -1
+    assert "connection refused" in resp["errmsg"]
+
+
+@patch("httpx.post")
+def test_send_message_json_parse_error(mock_post, bot):
+    """ValueError from .json() returns an error dict."""
+    mock_post.return_value.json.side_effect = ValueError("invalid json")
+    resp = bot._send_message("text", {"content": "hi"})
+    assert resp["errcode"] == -1
+    assert "invalid json" in resp["errmsg"]

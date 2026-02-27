@@ -1,5 +1,6 @@
 import io
 import tarfile
+from unittest.mock import patch
 
 import pytest
 import pyzstd
@@ -88,3 +89,33 @@ def test_tarfilezstd_invalid_mode(tmp_path):
         TarFileZstd.zstopen(zst_path, "a")
     with pytest.raises(tarfile.ReadError):
         TarFileZstd.zstopen(zst_path, "r")
+
+
+def test_zstopen_bare_except_closes_fileobj(tmp_path):
+    """An unexpected exception during taropen triggers the bare except clause,
+    closing the ZstdFile and re-raising the original error."""
+    zst_path = tmp_path / "dummy.tar.zst"
+    # Create a valid zst file so ZstdFile opens without error
+    import io
+
+    import pyzstd
+
+    buf = io.BytesIO()
+    with pyzstd.open(buf, "wb") as f:
+        f.write(b"not a tar archive")
+    zst_path.write_bytes(buf.getvalue())
+
+    with patch.object(TarFileZstd, "taropen", side_effect=RuntimeError("unexpected")):
+        with pytest.raises(RuntimeError, match="unexpected"):
+            TarFileZstd.zstopen(zst_path, "r")
+
+
+def test_zstopen_zstd_error_in_write_mode_reraises(tmp_path):
+    """ZstdError during taropen in write mode re-raises (not wrapped in ReadError)."""
+    from pyzstd import ZstdError
+
+    zst_path = tmp_path / "new.tar.zst"
+
+    with patch.object(TarFileZstd, "taropen", side_effect=ZstdError("zstd bad")):
+        with pytest.raises(ZstdError, match="zstd bad"):
+            TarFileZstd.zstopen(zst_path, "w")

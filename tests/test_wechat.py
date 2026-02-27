@@ -1,5 +1,6 @@
 from unittest.mock import mock_open, patch
 
+import httpx
 import pytest
 
 from chaos_utils.wechat import (
@@ -57,6 +58,37 @@ class TestWechatWorkApp:
                     "safe": 0,
                 },
             )
+
+    def test_get_token_http_error(self, app):
+        with patch("httpx.get", side_effect=httpx.RequestError("timeout")):
+            token = app.get_token()
+        assert token is None
+
+    def test_get_token_json_error(self, app):
+        with patch("httpx.get") as mock_get:
+            mock_get.return_value.json.side_effect = ValueError("bad json")
+            token = app.get_token()
+        assert token is None
+
+    def test_get_token_api_error(self, app):
+        with patch("httpx.get") as mock_get:
+            mock_get.return_value.json.return_value = {
+                "errcode": 40001,
+                "errmsg": "invalid credential",
+            }
+            token = app.get_token()
+        assert token is None
+
+    def test_send_text_http_error(self, app):
+        with patch("httpx.post", side_effect=httpx.RequestError("conn refused")):
+            resp = app.send_text("hello")
+        assert resp["errcode"] == -1
+
+    def test_send_text_json_error(self, app):
+        with patch("httpx.post") as mock_post:
+            mock_post.return_value.json.side_effect = ValueError("not json")
+            resp = app.send_text("hello")
+        assert resp["errcode"] == -1
 
 
 # WechatWorkBot Tests
@@ -167,3 +199,149 @@ class TestWechatWorkBot:
             resp = bot.send_file("test.txt")
             assert resp["errcode"] == 0
             mock_upload.assert_called_once_with("test.txt")
+
+    def test_send_image_url_unexpected_error(self, bot):
+        """Non-RequestError exception during image fetch is caught and re-raised."""
+        with patch("httpx.get", side_effect=RuntimeError("unexpected")):
+            with pytest.raises(RuntimeError, match="unexpected"):
+                bot.send_image("http://example.com/img.jpg")
+
+    # ------------------------------------------------------------------
+    # Error / exception paths
+    # ------------------------------------------------------------------
+
+    def test_send_text_http_error(self, bot):
+        with patch("httpx.post", side_effect=httpx.RequestError("conn")):
+            resp = bot.send_text("hi")
+        assert resp["errcode"] == -1
+
+    def test_send_text_json_error(self, bot):
+        with patch("httpx.post") as mock_post:
+            mock_post.return_value.json.side_effect = ValueError("bad")
+            resp = bot.send_text("hi")
+        assert resp["errcode"] == -1
+
+    def test_send_markdown_http_error(self, bot):
+        with patch("httpx.post", side_effect=httpx.RequestError("conn")):
+            resp = bot.send_markdown("**text**")
+        assert resp["errcode"] == -1
+
+    def test_send_markdown_json_error(self, bot):
+        with patch("httpx.post") as mock_post:
+            mock_post.return_value.json.side_effect = ValueError("bad")
+            resp = bot.send_markdown("**text**")
+        assert resp["errcode"] == -1
+
+    def test_send_image_url_http_fetch_error(self, bot):
+        with patch("httpx.get", side_effect=httpx.RequestError("fetch fail")):
+            with pytest.raises(httpx.RequestError):
+                bot.send_image("http://example.com/img.jpg")
+
+    def test_send_image_url_too_large(self, bot):
+        large_bytes = b"x" * (2 * 2**20 + 1)
+        with patch("httpx.get") as mock_get:
+            mock_get.return_value.content = large_bytes
+            with pytest.raises(WechatWorkBotFileTooLarge):
+                bot.send_image("http://example.com/big.jpg")
+
+    def test_send_image_file_oserror(self, bot):
+        with patch("builtins.open", side_effect=OSError("no such file")):
+            with pytest.raises(OSError):
+                bot.send_image("nonexistent.jpg")
+
+    def test_send_image_post_http_error(self, bot):
+        mock_data = b"valid_image"
+        m = mock_open(read_data=mock_data)
+        with (
+            patch("builtins.open", m),
+            patch("httpx.post", side_effect=httpx.RequestError("post fail")),
+        ):
+            resp = bot.send_image("img.jpg")
+        assert resp["errcode"] == -1
+
+    def test_send_image_post_json_error(self, bot):
+        mock_data = b"valid_image"
+        m = mock_open(read_data=mock_data)
+        with patch("builtins.open", m), patch("httpx.post") as mock_post:
+            mock_post.return_value.json.side_effect = ValueError("bad json")
+            resp = bot.send_image("img.jpg")
+        assert resp["errcode"] == -1
+
+    def test_send_news_http_error(self, bot):
+        with patch("httpx.post", side_effect=httpx.RequestError("conn")):
+            resp = bot.send_news("t", "d", "http://u", "http://p")
+        assert resp["errcode"] == -1
+
+    def test_send_news_json_error(self, bot):
+        with patch("httpx.post") as mock_post:
+            mock_post.return_value.json.side_effect = ValueError("bad")
+            resp = bot.send_news("t", "d", "http://u", "http://p")
+        assert resp["errcode"] == -1
+
+    def test_send_news_multiple_http_error(self, bot):
+        with patch("httpx.post", side_effect=httpx.RequestError("conn")):
+            resp = bot.send_news_multiple([])
+        assert resp["errcode"] == -1
+
+    def test_send_news_multiple_json_error(self, bot):
+        with patch("httpx.post") as mock_post:
+            mock_post.return_value.json.side_effect = ValueError("bad")
+            resp = bot.send_news_multiple([])
+        assert resp["errcode"] == -1
+
+    def test_send_file_oserror(self, bot):
+        with patch.object(bot, "upload_media", side_effect=OSError("no file")):
+            resp = bot.send_file("missing.txt")
+        assert resp["errcode"] == -1
+
+    def test_send_file_json_error(self, bot):
+        with (
+            patch.object(bot, "upload_media", return_value="mid"),
+            patch("httpx.post") as mock_post,
+        ):
+            mock_post.return_value.json.side_effect = ValueError("bad")
+            resp = bot.send_file("f.txt")
+        assert resp["errcode"] == -1
+
+    def test_upload_media_oserror(self, bot):
+        with patch("builtins.open", side_effect=OSError("no file")):
+            with pytest.raises(OSError):
+                bot.upload_media("missing.txt")
+
+    def test_upload_media_http_error(self, bot):
+        mock_data = b"x" * 100
+        m = mock_open(read_data=mock_data)
+        with (
+            patch("builtins.open", m),
+            patch("httpx.post", side_effect=httpx.RequestError("conn")),
+        ):
+            with pytest.raises(httpx.RequestError):
+                bot.upload_media("f.txt")
+
+    def test_upload_media_json_error(self, bot):
+        mock_data = b"x" * 100
+        m = mock_open(read_data=mock_data)
+        with patch("builtins.open", m), patch("httpx.post") as mock_post:
+            mock_post.return_value.json.side_effect = ValueError("bad json")
+            with pytest.raises(ValueError, match="bad json"):
+                bot.upload_media("f.txt")
+
+    def test_upload_media_api_error(self, bot):
+        mock_data = b"x" * 100
+        m = mock_open(read_data=mock_data)
+        with patch("builtins.open", m), patch("httpx.post") as mock_post:
+            mock_post.return_value.json.return_value = {
+                "errcode": 40005,
+                "errmsg": "fail",
+            }
+            with pytest.raises(Exception, match="Upload media failed"):
+                bot.upload_media("f.txt")
+
+    def test_upload_media_missing_media_id(self, bot):
+        """errcode==0 but no media_id in response raises ValueError."""
+        mock_data = b"x" * 100
+        m = mock_open(read_data=mock_data)
+        with patch("builtins.open", m), patch("httpx.post") as mock_post:
+            mock_post.return_value.json.return_value = {"errcode": 0}
+            with pytest.raises(ValueError, match="media_id is missing"):
+                bot.upload_media("f.txt")
