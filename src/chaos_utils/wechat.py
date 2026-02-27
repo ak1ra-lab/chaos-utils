@@ -1,7 +1,7 @@
 import base64
 import hashlib
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import httpx
 
@@ -39,7 +39,7 @@ class WechatWorkApp:
 
         self.token = self.get_token()
 
-    def get_token(self) -> Optional[str]:
+    def get_token(self) -> str | None:
         """
         Get access token from WeChat Work API.
         Returns:
@@ -63,7 +63,7 @@ class WechatWorkApp:
             logger.error("Get token failed: %s", resp_json)
             return None
 
-    def send_text(self, message: str, touser: str = "@all") -> Dict[str, Any]:
+    def send_text(self, message: str, touser: str = "@all") -> dict[str, Any]:
         """
         Send a text message to specified user(s).
         Args:
@@ -124,9 +124,9 @@ class WechatWorkBot:
     def send_text(
         self,
         message: str,
-        mentioned_list: Optional[List[str]] = None,
-        mentioned_mobile_list: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
+        mentioned_list: Optional[list[str]] = None,
+        mentioned_mobile_list: Optional[list[str]] = None,
+    ) -> dict[str, Any]:
         """
         Send a text message.
         Args:
@@ -160,7 +160,7 @@ class WechatWorkBot:
             logger.error("Failed to parse bot send_text response: %s", e)
             return {"errcode": -1, "errmsg": str(e)}
 
-    def send_markdown(self, message: str) -> Dict[str, Any]:
+    def send_markdown(self, message: str) -> dict[str, Any]:
         """
         Send a markdown message.
         Args:
@@ -181,7 +181,7 @@ class WechatWorkBot:
             logger.error("Failed to parse markdown response: %s", e)
             return {"errcode": -1, "errmsg": str(e)}
 
-    def send_image(self, image_uri: str) -> Dict[str, Any]:
+    def send_image(self, image_uri: str) -> dict[str, Any]:
         """
         Send an image message.
         Args:
@@ -238,7 +238,7 @@ class WechatWorkBot:
 
     def send_news(
         self, title: str, description: str, url: str, picurl: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Send a single news article.
         Args:
@@ -273,7 +273,7 @@ class WechatWorkBot:
             logger.error("Failed to parse news response: %s", e)
             return {"errcode": -1, "errmsg": str(e)}
 
-    def send_news_multiple(self, articles: List[Dict[str, str]]) -> Dict[str, Any]:
+    def send_news_multiple(self, articles: list[dict[str, str]]) -> dict[str, Any]:
         """
         Send multiple news articles.
         Args:
@@ -293,7 +293,7 @@ class WechatWorkBot:
             logger.error("Failed to parse multiple news response: %s", e)
             return {"errcode": -1, "errmsg": str(e)}
 
-    def send_file(self, filename: str) -> Dict[str, Any]:
+    def send_file(self, filename: str) -> dict[str, Any]:
         """
         Send a file message.
         Args:
@@ -352,7 +352,12 @@ class WechatWorkBot:
             raise
 
         if resp_json.get("errcode") == 0:
-            return resp_json.get("media_id")
+            media_id = resp_json.get("media_id")
+            if media_id is None:
+                raise ValueError(
+                    "Upload media succeeded but media_id is missing: %s" % resp_json
+                )
+            return media_id
         else:
             logger.error("Upload media failed: %s", resp_json)
             raise Exception("Upload media failed: %s" % resp_json)

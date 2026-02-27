@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 import httpx
 
@@ -41,9 +41,9 @@ class TelegramBot:
         parse_mode: Optional[str] = None,
         disable_web_page_preview: bool = False,
         disable_notification: bool = False,
-        reply_markup: Optional[Dict[str, Any]] = None,
+        reply_markup: Optional[dict[str, Any]] = None,
         timeout: Optional[float] = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Send a text message using sendMessage.
 
@@ -63,7 +63,7 @@ class TelegramBot:
           httpx.RequestError / ValueError / RuntimeError
         """
         cid = self._resolve_chat_id(chat_id)
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "chat_id": cid,
             "text": text,
             "disable_web_page_preview": disable_web_page_preview,
@@ -92,7 +92,7 @@ class TelegramBot:
             raise
 
     # Convenience alias
-    def send(self, text: str, **kwargs) -> Dict[str, Any]:
+    def send(self, text: str, **kwargs) -> dict[str, Any]:
         """
         Convenience alias, same as send_message.
         """

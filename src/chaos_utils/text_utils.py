@@ -2,7 +2,6 @@ import base64
 import json
 import logging
 from pathlib import Path
-from typing import Union
 
 import chardet
 import tomllib
@@ -10,7 +9,7 @@ import tomllib
 logger = logging.getLogger(__name__)
 
 
-def detect_encoding(filepath: Path, num_bytes: int = 8192) -> str:
+def detect_encoding(filepath: Path, num_bytes: int = 8192) -> str | None:
     """
     Detect the character encoding of a file.
 
@@ -87,7 +86,7 @@ def iter_filepath_lines(filepath: Path):
             yield line
 
 
-def read_json(filepath: Path) -> Union[dict, list, None]:
+def read_json(filepath: Path) -> dict | list | None:
     """
     Read and parse JSON from ``filepath`` using detected encoding.
 
@@ -122,7 +121,7 @@ def save_json(filepath: Path, data: dict, sort_keys: bool = True) -> None:
         f.write(json.dumps(data, ensure_ascii=False, indent=4, sort_keys=sort_keys))
 
 
-def read_toml(filepath: Path) -> Union[dict, list, None]:
+def read_toml(filepath: Path) -> dict | list | None:
     """
     Read TOML data from ``filepath``.
 
@@ -143,7 +142,7 @@ def read_toml(filepath: Path) -> Union[dict, list, None]:
     return data
 
 
-def b64decode(data: str):
+def b64decode(data: str) -> str:
     """
     Decode a URL-safe Base64-encoded string into a UTF-8 string.
 

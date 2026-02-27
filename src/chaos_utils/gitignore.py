@@ -1,11 +1,11 @@
 import os
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Dict, Iterator, Tuple
 
 from pathspec import GitIgnoreSpec
 
 
-def load_directory_gitignore_specs(directory: Path) -> Dict[Path, GitIgnoreSpec]:
+def load_directory_gitignore_specs(directory: Path) -> dict[Path, GitIgnoreSpec]:
     """
     Load all ``.gitignore`` files found under ``directory``.
 
@@ -35,7 +35,7 @@ def load_directory_gitignore_specs(directory: Path) -> Dict[Path, GitIgnoreSpec]
     return specs
 
 
-def should_path_ignore(path: Path, specs: Dict[Path, GitIgnoreSpec]) -> bool:
+def should_path_ignore(path: Path, specs: dict[Path, GitIgnoreSpec]) -> bool:
     """
     Return True if ``path`` should be ignored by git rules.
 
@@ -60,7 +60,7 @@ def should_path_ignore(path: Path, specs: Dict[Path, GitIgnoreSpec]) -> bool:
     # Find all applicable .gitignore rules
     for dir_path, spec in specs.items():
         # Only apply when the path is in the .gitignore directory or its subdirectories
-        if dir_path not in [*path.parents]:
+        if dir_path not in path.parents:
             continue
         relpath = path.relative_to(dir_path)
         # Check both directory and file
@@ -72,7 +72,7 @@ def should_path_ignore(path: Path, specs: Dict[Path, GitIgnoreSpec]) -> bool:
     return False
 
 
-def path_walk(directory: Path) -> Iterator[Tuple[Path, Path, Path]]:
+def path_walk(directory: Path) -> Iterator[tuple[Path, list[Path], list[Path]]]:
     """
     Lightweight wrapper around ``os.walk`` that yields Path objects.
 
@@ -96,7 +96,7 @@ def path_walk(directory: Path) -> Iterator[Tuple[Path, Path, Path]]:
 
 def path_walk_respect_gitignore(
     directory: Path,
-) -> Iterator[Tuple[Path, Path, Path]]:
+) -> Iterator[tuple[Path, list[Path], list[Path]]]:
     """
     Walk directory tree while applying discovered ``.gitignore`` rules.
 
@@ -114,10 +114,21 @@ def path_walk_respect_gitignore(
     specs = load_directory_gitignore_specs(directory)
     for root, dirnames, filenames in os.walk(directory):
         root_path = Path(root)
-        dirs = [d for d in dirnames if not should_path_ignore(root_path / d, specs)]
-        files = [f for f in filenames if not should_path_ignore(root_path / f, specs)]
+        # Keep as strings for os.walk in-place pruning, convert to Path for yield
+        filtered_dirs = [
+            d for d in dirnames if not should_path_ignore(root_path / d, specs)
+        ]
+        # Prune os.walk traversal in-place so ignored directories are never descended into
+        dirnames[:] = filtered_dirs
+        filtered_files = [
+            f for f in filenames if not should_path_ignore(root_path / f, specs)
+        ]
 
-        yield root_path, dirs, files
+        yield (
+            root_path,
+            [Path(d) for d in filtered_dirs],
+            [Path(f) for f in filtered_files],
+        )
 
 
 def iter_files_with_respect_gitignore(

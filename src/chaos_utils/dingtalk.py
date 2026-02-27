@@ -3,7 +3,7 @@ import hashlib
 import hmac
 import time
 import urllib.parse
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import httpx
 
@@ -52,9 +52,9 @@ class DingTalkBot:
     def _send_message(
         self,
         msg_type: str,
-        content: Dict[str, Any],
-        at: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        content: dict[str, Any],
+        at: Optional[dict[str, Any]] = None,
+    ) -> dict[str, Any]:
         """
         Send message to DingTalk group.
         Args:
@@ -87,8 +87,8 @@ class DingTalkBot:
             return {"errcode": -1, "errmsg": str(e)}
 
     def send_text(
-        self, content: str, at_mobiles: Optional[List[str]] = None, at_all: bool = False
-    ) -> Dict[str, Any]:
+        self, content: str, at_mobiles: Optional[list[str]] = None, at_all: bool = False
+    ) -> dict[str, Any]:
         """
         Send text message.
         Args:
@@ -112,9 +112,9 @@ class DingTalkBot:
         self,
         title: str,
         text: str,
-        at_mobiles: Optional[List[str]] = None,
+        at_mobiles: Optional[list[str]] = None,
         at_all: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Send markdown message.
         Args:
