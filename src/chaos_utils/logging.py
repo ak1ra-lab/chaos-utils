@@ -4,8 +4,6 @@ import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-logging_dir = Path(f"~/.local/state/{__package__}/log").expanduser()
-
 # Standard LogRecord attributes — anything else on the record came from `extra=`
 _LOG_RECORD_ATTRIBUTES = frozenset(
     {
@@ -33,6 +31,27 @@ _LOG_RECORD_ATTRIBUTES = frozenset(
         "taskName",
     }
 )
+
+
+def _resolve_logging_dir(name: str) -> Path:
+    """Return the XDG-compliant log directory for *name*.
+
+    The directory is ``$XDG_STATE_HOME/<app>/log`` where *app* is the
+    top-level package component of *name* (everything before the first
+    ``'.'``).  ``XDG_STATE_HOME`` defaults to ``~/.local/state`` when not
+    set, as specified by the XDG Base Directory Specification.
+
+    Args:
+        name: A logger name, typically the ``__name__`` of the caller module.
+
+    Returns:
+        A :class:`~pathlib.Path` for the resolved log directory.
+    """
+    xdg_state_home = Path(
+        os.environ.get("XDG_STATE_HOME", "~/.local/state")
+    ).expanduser()
+    app_name = name.split(".")[0]
+    return xdg_state_home / app_name / "log"
 
 
 class JsonFormatter(logging.Formatter):
@@ -79,7 +98,9 @@ class JsonFormatter(logging.Formatter):
 def setup_logger(
     name: str,
     level: int = logging.INFO,
-    file_logging: bool = False,
+    file_logging: bool | Path = False,
+    max_bytes: int = 10 * 1024 * 1024,
+    backup_count: int = 10,
 ) -> logging.Logger:
     """
     Configure and return the root logger for the process.
@@ -89,8 +110,17 @@ def setup_logger(
             caller module).
         level: The default logging level to set on the root logger if not in
             debug mode. Default is ``logging.INFO``.
-        file_logging: If True, enable rotating file logging to
-            ``~/.local/state/<package>/log/<name>.log``.
+        file_logging: Controls rotating file logging.
+
+            * ``False`` (default) — no file logging.
+            * ``True`` — write to
+              ``$XDG_STATE_HOME/<app>/log/<name>.log`` where *app* is the
+              top-level package component of *name*.
+            * :class:`~pathlib.Path` — write to the given file path
+              directly (the parent directory is created if necessary).
+        max_bytes: Maximum size in bytes of each log file before rotation.
+            Default is 10 MiB.
+        backup_count: Number of rotated backup files to keep. Default is 10.
 
     Returns:
         A configured :class:`logging.Logger` instance for ``name``.
@@ -107,12 +137,17 @@ def setup_logger(
     console_handler.setFormatter(logging.Formatter("%(message)s"))
     logger.addHandler(console_handler)
 
-    if file_logging:
-        logging_dir.mkdir(parents=True, exist_ok=True)
+    if file_logging is not False:
+        if isinstance(file_logging, Path):
+            log_path = file_logging
+        else:
+            log_dir = _resolve_logging_dir(name)
+            log_path = log_dir / f"{name}.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
         file_handler = RotatingFileHandler(
-            filename=logging_dir / f"{name}.log",
-            maxBytes=10 * 1024 * 1024,
-            backupCount=10,
+            filename=log_path,
+            maxBytes=max_bytes,
+            backupCount=backup_count,
         )
         file_handler.setFormatter(
             logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s][%(message)s]")
@@ -127,22 +162,33 @@ def setup_logger(
 def setup_json_logger(
     name: str,
     level: int = logging.INFO,
-    file_logging: bool = False,
+    file_logging: bool | Path = False,
+    max_bytes: int = 10 * 1024 * 1024,
+    backup_count: int = 10,
 ) -> logging.Logger:
     """Configure and return the root logger that emits JSON-formatted logs.
 
     This is identical to :func:`setup_logger` except that any file handler
     created will use :class:`JsonFormatter` so persisted logs are JSON lines
-    (``.jsonl``). A console handler is still attached which prints the
-    message portion for readability.
+    (``.jsonl``). A console handler is still attached which emits JSON for
+    structured log consumers.
 
     Args:
         name: The name of the logger to return (usually ``__name__`` of the
             caller module).
         level: The default logging level to set on the root logger if not in
             debug mode. Default is ``logging.INFO``.
-        file_logging: If True, enable rotating file logging to
-            ``~/.local/state/<package>/log/<name>.jsonl``.
+        file_logging: Controls rotating file logging.
+
+            * ``False`` (default) — no file logging.
+            * ``True`` — write to
+              ``$XDG_STATE_HOME/<app>/log/<name>.jsonl`` where *app* is the
+              top-level package component of *name*.
+            * :class:`~pathlib.Path` — write to the given file path
+              directly (the parent directory is created if necessary).
+        max_bytes: Maximum size in bytes of each log file before rotation.
+            Default is 10 MiB.
+        backup_count: Number of rotated backup files to keep. Default is 10.
 
     Returns:
         A configured :class:`logging.Logger` instance.
@@ -159,12 +205,17 @@ def setup_json_logger(
     console_handler.setFormatter(JsonFormatter())
     logger.addHandler(console_handler)
 
-    if file_logging:
-        logging_dir.mkdir(parents=True, exist_ok=True)
+    if file_logging is not False:
+        if isinstance(file_logging, Path):
+            log_path = file_logging
+        else:
+            log_dir = _resolve_logging_dir(name)
+            log_path = log_dir / f"{name}.jsonl"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
         file_handler = RotatingFileHandler(
-            filename=logging_dir / f"{name}.jsonl",
-            maxBytes=10 * 1024 * 1024,
-            backupCount=10,
+            filename=log_path,
+            maxBytes=max_bytes,
+            backupCount=backup_count,
         )
         file_handler.setFormatter(JsonFormatter())
         logger.addHandler(file_handler)

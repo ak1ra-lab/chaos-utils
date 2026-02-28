@@ -171,22 +171,18 @@ def test_setup_logger_debug_env_var(monkeypatch):
     assert logging.getLogger().level == logging.DEBUG
 
 
-def test_setup_logger_file_logging(tmp_path, monkeypatch):
-    """With file_logging=True a RotatingFileHandler is added."""
-    from chaos_utils import logging as chaos_logging
-
-    monkeypatch.setattr(chaos_logging, "logging_dir", tmp_path)
+def test_setup_logger_file_logging(tmp_path):
+    """With file_logging=Path a RotatingFileHandler is added at that path."""
+    from logging.handlers import RotatingFileHandler
 
     from chaos_utils.logging import setup_logger
 
-    setup_logger("filetest", file_logging=True)
-
-    from logging.handlers import RotatingFileHandler
+    log_file = tmp_path / "filetest.log"
+    setup_logger("filetest", file_logging=log_file)
 
     root = logging.getLogger()
     file_handlers = [h for h in root.handlers if isinstance(h, RotatingFileHandler)]
     assert len(file_handlers) == 1
-    log_file = tmp_path / "filetest.log"
     assert log_file.exists()
 
 
@@ -213,22 +209,17 @@ def test_setup_json_logger_second_call_guard():
     assert len(logging.getLogger().handlers) == handler_count
 
 
-def test_setup_json_logger_file_logging(tmp_path, monkeypatch):
-    """With file_logging=True a RotatingFileHandler with JsonFormatter is added."""
-    from chaos_utils import logging as chaos_logging
-    from chaos_utils.logging import JsonFormatter
-
-    monkeypatch.setattr(chaos_logging, "logging_dir", tmp_path)
-
-    from chaos_utils.logging import setup_json_logger
-
-    setup_json_logger("jsonfile", file_logging=True)
-
+def test_setup_json_logger_file_logging(tmp_path):
+    """With file_logging=Path a RotatingFileHandler with JsonFormatter is added."""
     from logging.handlers import RotatingFileHandler
+
+    from chaos_utils.logging import JsonFormatter, setup_json_logger
+
+    log_file = tmp_path / "jsonfile.jsonl"
+    setup_json_logger("jsonfile", file_logging=log_file)
 
     root = logging.getLogger()
     file_handlers = [h for h in root.handlers if isinstance(h, RotatingFileHandler)]
     assert len(file_handlers) == 1
     assert isinstance(file_handlers[0].formatter, JsonFormatter)
-    log_file = tmp_path / "jsonfile.jsonl"
     assert log_file.exists()
