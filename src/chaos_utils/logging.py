@@ -6,6 +6,34 @@ from pathlib import Path
 
 logging_dir = Path(f"~/.local/state/{__package__}/log").expanduser()
 
+# Standard LogRecord attributes — anything else on the record came from `extra=`
+_LOG_RECORD_ATTRIBUTES = frozenset(
+    {
+        "name",
+        "msg",
+        "args",
+        "levelname",
+        "levelno",
+        "pathname",
+        "filename",
+        "module",
+        "exc_info",
+        "exc_text",
+        "stack_info",
+        "lineno",
+        "funcName",
+        "created",
+        "msecs",
+        "relativeCreated",
+        "thread",
+        "threadName",
+        "processName",
+        "process",
+        "message",
+        "taskName",
+    }
+)
+
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord):
@@ -39,9 +67,11 @@ class JsonFormatter(logging.Formatter):
         if record.stack_info:
             log_record["stack_info"] = self.formatStack(record.stack_info)
 
-        # Add any extra attributes passed to the log call
-        if hasattr(record, "extra"):
-            log_record.update(record.extra)
+        # Python merges extra= keys directly onto the LogRecord as top-level
+        # attributes, so collect anything that isn't a standard field.
+        for key, value in record.__dict__.items():
+            if key not in _LOG_RECORD_ATTRIBUTES:
+                log_record[key] = value
 
         return json.dumps(log_record, ensure_ascii=False, default=str)
 
@@ -126,7 +156,7 @@ def setup_json_logger(
     logger.setLevel(logging.DEBUG if debug else level)
 
     console_handler = logging.StreamHandler()
-    console_handler.setFormatter(logging.Formatter("%(message)s"))
+    console_handler.setFormatter(JsonFormatter())
     logger.addHandler(console_handler)
 
     if file_logging:

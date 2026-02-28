@@ -94,25 +94,31 @@ def test_json_formatter_with_stack_info():
 
 
 def test_json_formatter_with_extra():
+    """Extra fields passed via extra= should appear as top-level JSON keys.
+
+    Python's logging module merges extra= keys directly onto the LogRecord as
+    top-level attributes (e.g. record.request_id), not as a nested dict under
+    an "extra" key.  Simulate that behaviour by setting attributes directly.
+    """
     from chaos_utils.logging import JsonFormatter
 
     formatter = JsonFormatter()
     record = _make_record("msg")
-    record.extra = {"request_id": "abc123", "user": "alice"}
+    # Simulate what logging.Logger.makeRecord does when called with extra=
+    record.request_id = "abc123"
+    record.user = "alice"
     output = formatter.format(record)
     data = json.loads(output)
     assert data["request_id"] == "abc123"
     assert data["user"] == "alice"
 
 
-def test_json_formatter_no_extra_attr():
-    """Records without an 'extra' attribute should not raise."""
+def test_json_formatter_no_extra_fields():
+    """Records without any extra fields should format without error."""
     from chaos_utils.logging import JsonFormatter
 
     formatter = JsonFormatter()
     record = _make_record("no extra")
-    # record has no .extra attribute — should not blow up
-    assert not hasattr(record, "extra")
     output = formatter.format(record)
     data = json.loads(output)
     assert data["message"] == "no extra"
