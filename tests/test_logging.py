@@ -27,6 +27,45 @@ def reset_root_logger():
 
 
 # ---------------------------------------------------------------------------
+# TextFormatter
+# ---------------------------------------------------------------------------
+
+
+def test_text_formatter_basic():
+    from chaos_utils.logging import TextFormatter
+
+    formatter = TextFormatter("%(message)s")
+    record = _make_record("hello world")
+    output = formatter.format(record)
+    assert output == "hello world"
+
+
+def test_text_formatter_with_extra():
+    """Extra fields passed via extra= should be appended as key=value pairs."""
+    from chaos_utils.logging import TextFormatter
+
+    formatter = TextFormatter("%(message)s")
+    record = _make_record("msg")
+    # Simulate what logging.Logger.makeRecord does when called with extra=
+    record.request_id = "abc123"
+    record.user = "alice"
+    output = formatter.format(record)
+    assert "request_id=abc123" in output
+    assert "user=alice" in output
+    assert output.startswith("msg")
+
+
+def test_text_formatter_no_extra_fields():
+    """Records without extra fields should produce plain formatted output."""
+    from chaos_utils.logging import TextFormatter
+
+    formatter = TextFormatter("%(levelname)s %(message)s")
+    record = _make_record("no extra")
+    output = formatter.format(record)
+    assert output == "INFO no extra"
+
+
+# ---------------------------------------------------------------------------
 # JsonFormatter
 # ---------------------------------------------------------------------------
 
@@ -172,10 +211,10 @@ def test_setup_logger_debug_env_var(monkeypatch):
 
 
 def test_setup_logger_file_logging(tmp_path):
-    """With file_logging=Path a RotatingFileHandler is added at that path."""
+    """With file_logging=Path a RotatingFileHandler with TextFormatter is added."""
     from logging.handlers import RotatingFileHandler
 
-    from chaos_utils.logging import setup_logger
+    from chaos_utils.logging import TextFormatter, setup_logger
 
     log_file = tmp_path / "filetest.log"
     setup_logger("filetest", file_logging=log_file)
@@ -183,6 +222,7 @@ def test_setup_logger_file_logging(tmp_path):
     root = logging.getLogger()
     file_handlers = [h for h in root.handlers if isinstance(h, RotatingFileHandler)]
     assert len(file_handlers) == 1
+    assert isinstance(file_handlers[0].formatter, TextFormatter)
     assert log_file.exists()
 
 
