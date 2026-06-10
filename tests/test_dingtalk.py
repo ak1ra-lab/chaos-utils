@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-import httpx
+import httpx2
 import pytest
 
 from chaos_utils.dingtalk import DingTalkBot
@@ -19,7 +19,7 @@ def test_generate_signature_returns_timestamp_and_signature(bot):
     assert len(signature) > 0
 
 
-@patch("httpx.post")
+@patch("httpx2.post")
 def test_send_message_text(mock_post, bot):
     mock_post.return_value.json.return_value = {"errcode": 0, "errmsg": "ok"}
     content = {"content": "Hello"}
@@ -33,7 +33,7 @@ def test_send_message_text(mock_post, bot):
     assert kwargs["json"]["text"] == content
 
 
-@patch("httpx.post")
+@patch("httpx2.post")
 def test_send_message_with_at(mock_post, bot):
     mock_post.return_value.json.return_value = {"errcode": 0}
     content = {"content": "Hi"}
@@ -45,7 +45,7 @@ def test_send_message_with_at(mock_post, bot):
     assert kwargs["json"]["at"] == at
 
 
-@patch("httpx.post")
+@patch("httpx2.post")
 def test_send_text_with_at_mobiles_and_all(mock_post, bot):
     mock_post.return_value.json.return_value = {"errcode": 0}
     resp = bot.send_text("Hello", at_mobiles=["123456"], at_all=True)
@@ -56,7 +56,7 @@ def test_send_text_with_at_mobiles_and_all(mock_post, bot):
     assert kwargs["json"]["at"]["isAtAll"] is True
 
 
-@patch("httpx.post")
+@patch("httpx2.post")
 def test_send_text_without_at(mock_post, bot):
     mock_post.return_value.json.return_value = {"errcode": 0}
     resp = bot.send_text("Hello world")
@@ -66,7 +66,7 @@ def test_send_text_without_at(mock_post, bot):
     assert "at" not in kwargs["json"]
 
 
-@patch("httpx.post")
+@patch("httpx2.post")
 def test_send_markdown_with_at(mock_post, bot):
     mock_post.return_value.json.return_value = {"errcode": 0}
     resp = bot.send_markdown("Title", "Markdown text", at_mobiles=["123"], at_all=True)
@@ -80,7 +80,7 @@ def test_send_markdown_with_at(mock_post, bot):
     assert kwargs["json"]["at"]["isAtAll"] is True
 
 
-@patch("httpx.post")
+@patch("httpx2.post")
 def test_send_markdown_without_at(mock_post, bot):
     mock_post.return_value.json.return_value = {"errcode": 0}
     resp = bot.send_markdown("Title", "Text")
@@ -110,15 +110,15 @@ def test_send_message_when_signature_fails(bot):
     assert "sig error" in resp["errmsg"]
 
 
-@patch("httpx.post", side_effect=httpx.RequestError("connection refused"))
+@patch("httpx2.post", side_effect=httpx2.RequestError("connection refused"))
 def test_send_message_request_error(mock_post, bot):
-    """httpx.RequestError during POST returns an error dict."""
+    """httpx2.RequestError during POST returns an error dict."""
     resp = bot._send_message("text", {"content": "hi"})
     assert resp["errcode"] == -1
     assert "connection refused" in resp["errmsg"]
 
 
-@patch("httpx.post")
+@patch("httpx2.post")
 def test_send_message_json_parse_error(mock_post, bot):
     """ValueError from .json() returns an error dict."""
     mock_post.return_value.json.side_effect = ValueError("invalid json")

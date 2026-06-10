@@ -5,7 +5,7 @@ import time
 import urllib.parse
 from typing import Any, Optional
 
-import httpx
+import httpx2
 
 from chaos_utils.logging import setup_logger
 
@@ -76,10 +76,10 @@ class DingTalkBot:
             data["at"] = at
 
         try:
-            resp = httpx.post(webhook_url, json=data)
+            resp = httpx2.post(webhook_url, json=data)
             resp_json = resp.json()
             return resp_json
-        except httpx.RequestError as e:
+        except httpx2.RequestError as e:
             logger.error("HTTP request failed when sending message: %s", e)
             return {"errcode": -1, "errmsg": str(e)}
         except ValueError as e:

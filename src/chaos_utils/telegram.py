@@ -1,6 +1,6 @@
 from typing import Any, Optional, Union
 
-import httpx
+import httpx2
 
 
 class TelegramBot:
@@ -60,7 +60,7 @@ class TelegramBot:
           Parsed JSON response from Telegram API (dict)
 
         Exceptions:
-          httpx.RequestError / ValueError / RuntimeError
+          httpx2.RequestError / ValueError / RuntimeError
         """
         cid = self._resolve_chat_id(chat_id)
         payload: dict[str, Any] = {
@@ -76,7 +76,7 @@ class TelegramBot:
 
         url = f"{self.base_url}/sendMessage"
         try:
-            resp = httpx.post(
+            resp = httpx2.post(
                 url,
                 json=payload,
                 timeout=(timeout if timeout is not None else self.timeout),
@@ -87,7 +87,7 @@ class TelegramBot:
                 # API returned an error payload
                 raise RuntimeError(f"telegram error: {data}")
             return data
-        except httpx.RequestError:
+        except httpx2.RequestError:
             # Propagate httpx request/network errors to caller
             raise
 

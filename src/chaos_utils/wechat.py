@@ -3,7 +3,7 @@ import hashlib
 import os
 from typing import Any, Optional
 
-import httpx
+import httpx2
 
 from chaos_utils.logging import setup_logger
 
@@ -48,9 +48,9 @@ class WechatWorkApp:
         url = f"{self.qyapi}/gettoken"
         params = {"corpid": self.corpid, "corpsecret": self.corpsecret}
         try:
-            resp = httpx.get(url, params=params)
+            resp = httpx2.get(url, params=params)
             resp_json = resp.json()
-        except httpx.RequestError as e:
+        except httpx2.RequestError as e:
             logger.error("HTTP request failed when getting token: %s", e)
             return None
         except ValueError as e:
@@ -85,10 +85,10 @@ class WechatWorkApp:
             "Message: '%s' will be sent to %s by %s", message, touser, self.agentid
         )
         try:
-            resp = httpx.post(url, params=params, json=data)
+            resp = httpx2.post(url, params=params, json=data)
             resp_json = resp.json()
             return resp_json
-        except httpx.RequestError as e:
+        except httpx2.RequestError as e:
             logger.error("HTTP request failed when sending text: %s", e)
             return {"errcode": -1, "errmsg": str(e)}
         except ValueError as e:
@@ -150,10 +150,10 @@ class WechatWorkBot:
         }
 
         try:
-            resp = httpx.post(self.send_url, json=data)
+            resp = httpx2.post(self.send_url, json=data)
             resp_json = resp.json()
             return resp_json
-        except httpx.RequestError as e:
+        except httpx2.RequestError as e:
             logger.error("HTTP request failed when sending bot text: %s", e)
             return {"errcode": -1, "errmsg": str(e)}
         except ValueError as e:
@@ -171,10 +171,10 @@ class WechatWorkBot:
         data = {"msgtype": "markdown", "markdown": {"content": message}}
 
         try:
-            resp = httpx.post(self.send_url, json=data)
+            resp = httpx2.post(self.send_url, json=data)
             resp_json = resp.json()
             return resp_json
-        except httpx.RequestError as e:
+        except httpx2.RequestError as e:
             logger.error("HTTP request failed when sending markdown: %s", e)
             return {"errcode": -1, "errmsg": str(e)}
         except ValueError as e:
@@ -193,9 +193,9 @@ class WechatWorkBot:
         """
         if image_uri.startswith("http"):
             try:
-                resp = httpx.get(image_uri)
+                resp = httpx2.get(image_uri)
                 image_bytes = resp.content
-            except httpx.RequestError as e:
+            except httpx2.RequestError as e:
                 logger.error("HTTP request failed when fetching image: %s", e)
                 raise
             except Exception as e:
@@ -226,10 +226,10 @@ class WechatWorkBot:
         }
 
         try:
-            resp = httpx.post(self.send_url, json=data)
+            resp = httpx2.post(self.send_url, json=data)
             resp_json = resp.json()
             return resp_json
-        except httpx.RequestError as e:
+        except httpx2.RequestError as e:
             logger.error("HTTP request failed when sending image: %s", e)
             return {"errcode": -1, "errmsg": str(e)}
         except ValueError as e:
@@ -263,10 +263,10 @@ class WechatWorkBot:
             },
         }
         try:
-            resp = httpx.post(self.send_url, json=data)
+            resp = httpx2.post(self.send_url, json=data)
             resp_json = resp.json()
             return resp_json
-        except httpx.RequestError as e:
+        except httpx2.RequestError as e:
             logger.error("HTTP request failed when sending news: %s", e)
             return {"errcode": -1, "errmsg": str(e)}
         except ValueError as e:
@@ -283,10 +283,10 @@ class WechatWorkBot:
         """
         data = {"msgtype": "news", "news": {"articles": articles}}
         try:
-            resp = httpx.post(self.send_url, json=data)
+            resp = httpx2.post(self.send_url, json=data)
             resp_json = resp.json()
             return resp_json
-        except httpx.RequestError as e:
+        except httpx2.RequestError as e:
             logger.error("HTTP request failed when sending multiple news: %s", e)
             return {"errcode": -1, "errmsg": str(e)}
         except ValueError as e:
@@ -304,10 +304,10 @@ class WechatWorkBot:
         try:
             media_id = self.upload_media(filename)
             data = {"msgtype": "file", "file": {"media_id": media_id}}
-            resp = httpx.post(self.send_url, json=data)
+            resp = httpx2.post(self.send_url, json=data)
             resp_json = resp.json()
             return resp_json
-        except (httpx.RequestError, OSError) as e:
+        except (httpx2.RequestError, OSError) as e:
             logger.error("Failed to send file: %s", e)
             return {"errcode": -1, "errmsg": str(e)}
         except ValueError as e:
@@ -342,9 +342,9 @@ class WechatWorkBot:
 
         files = {"media": (os.path.basename(filename), content)}
         try:
-            resp = httpx.post(self.upload_media_url, files=files)
+            resp = httpx2.post(self.upload_media_url, files=files)
             resp_json = resp.json()
-        except httpx.RequestError as e:
+        except httpx2.RequestError as e:
             logger.error("HTTP request failed when uploading media: %s", e)
             raise
         except ValueError as e:
