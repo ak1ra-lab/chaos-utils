@@ -184,7 +184,7 @@ def setup_logger(
         )
         logger.addHandler(file_handler)
 
-    logger._setup_root_logger = True
+    object.__setattr__(logger, "_setup_root_logger", True)
 
     return logger
 
@@ -250,6 +250,6 @@ def setup_json_logger(
         file_handler.setFormatter(JsonFormatter())
         logger.addHandler(file_handler)
 
-    logger._setup_root_logger = True
+    object.__setattr__(logger, "_setup_root_logger", True)
 
     return logger

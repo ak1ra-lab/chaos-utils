@@ -74,7 +74,7 @@ class TarFileZstd(TarFile):
             fileobj.close()
             raise
 
-        tar._extfileobj = False
+        object.__setattr__(tar, "_extfileobj", False)
         return tar
 
 
