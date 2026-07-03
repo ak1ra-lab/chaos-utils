@@ -3,7 +3,7 @@ from unittest.mock import patch
 import httpx2
 import pytest
 
-from chaos_utils.dingtalk import DingTalkBot
+from chaos_utils.notify.dingtalk import DingTalkBot
 
 
 @pytest.fixture
@@ -91,37 +91,48 @@ def test_send_markdown_without_at(mock_post, bot):
 
 
 # ---------------------------------------------------------------------------
+# send() BaseNotifier interface
+# ---------------------------------------------------------------------------
+
+
+@patch("httpx2.post")
+def test_send_returns_true_on_success(mock_post, bot):
+    mock_post.return_value.json.return_value = {"errcode": 0}
+    assert bot.send("hello") is True
+
+
+def test_send_returns_false_on_error(bot):
+    with patch.object(bot, "send_text", side_effect=RuntimeError("fail")):
+        assert bot.send("hello") is False
+
+
+# ---------------------------------------------------------------------------
 # Error / exception paths
 # ---------------------------------------------------------------------------
 
 
 def test_generate_signature_failure_propagates(bot):
-    """If hmac.new raises, _generate_signature should propagate the error."""
-    with patch("chaos_utils.dingtalk.hmac.new", side_effect=RuntimeError("hmac fail")):
+    with patch(
+        "chaos_utils.notify.dingtalk.hmac.new", side_effect=RuntimeError("hmac fail")
+    ):
         with pytest.raises(RuntimeError, match="hmac fail"):
             bot._generate_signature()
 
 
 def test_send_message_when_signature_fails(bot):
-    """If _generate_signature raises, _send_message returns an error dict."""
     with patch.object(bot, "_generate_signature", side_effect=ValueError("sig error")):
-        resp = bot._send_message("text", {"content": "hi"})
-    assert resp["errcode"] == -1
-    assert "sig error" in resp["errmsg"]
+        with pytest.raises(ValueError, match="sig error"):
+            bot._send_message("text", {"content": "hi"})
 
 
 @patch("httpx2.post", side_effect=httpx2.RequestError("connection refused"))
 def test_send_message_request_error(mock_post, bot):
-    """httpx2.RequestError during POST returns an error dict."""
-    resp = bot._send_message("text", {"content": "hi"})
-    assert resp["errcode"] == -1
-    assert "connection refused" in resp["errmsg"]
+    with pytest.raises(httpx2.RequestError, match="connection refused"):
+        bot._send_message("text", {"content": "hi"})
 
 
 @patch("httpx2.post")
 def test_send_message_json_parse_error(mock_post, bot):
-    """ValueError from .json() returns an error dict."""
     mock_post.return_value.json.side_effect = ValueError("invalid json")
-    resp = bot._send_message("text", {"content": "hi"})
-    assert resp["errcode"] == -1
-    assert "invalid json" in resp["errmsg"]
+    with pytest.raises(ValueError, match="invalid json"):
+        bot._send_message("text", {"content": "hi"})
