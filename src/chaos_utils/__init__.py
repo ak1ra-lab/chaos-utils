@@ -1,11 +1,8 @@
-"""
-chaos-utils: small collection of utility helpers used by ak1ra-lab.
+"""Collection of handy utils written in Python 3."""
 
-This package contains utilities for working with dictionaries, text
-and file encodings, gitignore-aware filesystem helpers, tar/zstd helpers
-and small logging helpers.
+from importlib.metadata import PackageNotFoundError, version
 
-The modules are intentionally lightweight and each documents its public
-functions in their docstrings which can be used by automated documentation
-generators.
-"""
+try:
+    __version__ = version("chaos-utils")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
