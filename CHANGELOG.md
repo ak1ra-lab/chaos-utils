@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-03
+
+### Added
+
+- Introduce `chaos_utils.notify` subpackage consolidating IM notification modules (Telegram, DingTalk, Feishu, WeChat Work)
+- Telegram Rich Markdown/Rich HTML support via `sendRichMessage` API with `send_rich_message(html=|markdown=)`
+- CLI entry point `python3 -m chaos_utils.notify.cli` for sending test notifications
+- Pydantic V2 config models (`ConfigFile`, `NotifierConfig`) with discriminated union on channel type
+- `__version__` from package metadata in `chaos_utils.__init__`
+
+### Changed
+
+- `TelegramBot`: require `chat_id` as required constructor parameter; remove `default_chat_id`
+
+### Removed
+
+- Remove `read_toml` thin wrapper; use stdlib `tomllib` directly
+- Remove unused WeChat Work bot methods (`send_image`, `send_news`, `send_file`, `upload_media`) and exception classes
+- Remove `_post_json` / `_get_json` helper methods from `BaseNotifier`
+
+### Fixed
+
+- Add missing type annotations in `logging.py`, `tarfile.py`, `text_utils.py`
+
+## [0.4.2] - 2026-06-10
+
+### Changed
+
+- Replace `httpx` with `httpx2` library
+
+### Fixed
+
+- Use `object.__setattr__` in logger setup to avoid recursion
+
+## [0.4.1] - 2026-03-01
+
+### Added
+
+- Add `TextFormatter` to append `extra=` fields in structured log output
+
 ## [0.4.0] - 2026-02-28
 
 ### Added
@@ -74,7 +114,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrate `src` and `tests` from chaos-box
 - Implement GitHub Actions CI workflows
 
-[Unreleased]: https://github.com/ak1ra-lab/chaos-utils/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/ak1ra-lab/chaos-utils/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/ak1ra-lab/chaos-utils/compare/v0.4.2...v0.5.0
+[0.4.2]: https://github.com/ak1ra-lab/chaos-utils/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/ak1ra-lab/chaos-utils/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/ak1ra-lab/chaos-utils/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/ak1ra-lab/chaos-utils/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/ak1ra-lab/chaos-utils/compare/v0.2.0...v0.3.0
