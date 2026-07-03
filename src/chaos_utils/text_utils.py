@@ -1,6 +1,7 @@
 import base64
 import json
 import logging
+from collections.abc import Generator
 from pathlib import Path
 
 import chardet
@@ -61,7 +62,7 @@ def detect_encoding(filepath: Path, num_bytes: int = 8192) -> str | None:
     return encoding
 
 
-def iter_filepath_lines(filepath: Path):
+def iter_filepath_lines(filepath: Path) -> Generator[str, None, None]:
     """
     Yield lines from ``filepath`` using a detected encoding.
 

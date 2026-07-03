@@ -85,7 +85,7 @@ class TextFormatter(logging.Formatter):
 
 
 class JsonFormatter(logging.Formatter):
-    def format(self, record: logging.LogRecord):
+    def format(self, record: logging.LogRecord) -> str:
         """Format a LogRecord as a JSON string.
 
         The returned value is a JSON-encoded object containing the timestamp,

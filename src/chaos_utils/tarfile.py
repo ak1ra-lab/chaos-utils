@@ -1,13 +1,16 @@
 # https://pyzstd.readthedocs.io/en/stable/#with-tarfile
 
 import contextlib
+import os
 import shutil
 import tarfile
 import tempfile
+from collections.abc import Generator, Mapping
 from tarfile import ReadError, TarFile
+from typing import Any, Literal
 
 import pyzstd
-from pyzstd import ZstdError, ZstdFile
+from pyzstd import ZstdDict, ZstdError, ZstdFile
 
 
 class TarFileZstd(TarFile):
@@ -16,13 +19,13 @@ class TarFileZstd(TarFile):
     @classmethod
     def zstopen(
         cls,
-        name,
-        mode="r",
-        fileobj=None,
-        level_or_option=None,
-        zstd_dict=None,
-        **kwargs,
-    ):
+        name: str | os.PathLike[str] | None = None,
+        mode: Literal["r", "w", "x"] = "r",
+        fileobj: Any = None,
+        level_or_option: int | Mapping[int, int] | None = None,
+        zstd_dict: ZstdDict | None = None,
+        **kwargs: Any,
+    ) -> TarFile:
         """
         Open a zstd-compressed tar archive for reading or writing.
 
@@ -59,8 +62,9 @@ class TarFileZstd(TarFile):
         if mode not in ("r", "w", "x"):
             raise ValueError("mode must be 'r', 'w' or 'x'")
 
+        _file: Any = fileobj or name
         fileobj = ZstdFile(
-            fileobj or name, mode, level_or_option=level_or_option, zstd_dict=zstd_dict
+            _file, mode, level_or_option=level_or_option, zstd_dict=zstd_dict
         )
 
         try:
@@ -79,7 +83,13 @@ class TarFileZstd(TarFile):
 
 
 @contextlib.contextmanager
-def ZstdTarReader(name, *, zstd_dict=None, level_or_option=None, **kwargs):
+def ZstdTarReader(
+    name: str | os.PathLike[str],
+    *,
+    zstd_dict: ZstdDict | None = None,
+    level_or_option: int | Mapping[int, int] | None = None,
+    **kwargs: Any,
+) -> Generator[TarFile, None, None]:
     """
     Context manager that yields a :class:`tarfile.TarFile` for a zstd
     compressed archive.
