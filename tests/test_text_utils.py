@@ -7,7 +7,6 @@ from chaos_utils.text_utils import (
     detect_encoding,
     iter_filepath_lines,
     read_json,
-    read_toml,
     save_json,
 )
 
@@ -151,25 +150,6 @@ def test_save_json_non_ascii(tmp_path):
     save_json(f, data)
     text = f.read_text(encoding="utf-8")
     assert "こんにちは" in text
-
-
-# ---------------------------------------------------------------------------
-# read_toml
-# ---------------------------------------------------------------------------
-
-
-def test_read_toml(tmp_path):
-    f = tmp_path / "config.toml"
-    f.write_text('[section]\nkey = "value"\nnumber = 42\n', encoding="utf-8")
-    result = read_toml(f)
-    assert result == {"section": {"key": "value", "number": 42}}
-
-
-def test_read_toml_array(tmp_path):
-    f = tmp_path / "arr.toml"
-    f.write_text("items = [1, 2, 3]\n", encoding="utf-8")
-    result = read_toml(f)
-    assert result["items"] == [1, 2, 3]
 
 
 # ---------------------------------------------------------------------------

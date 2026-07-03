@@ -30,7 +30,6 @@ pip install chaos-utils
 | `iter_filepath_lines(filepath)`             | Iterate over the lines of a text file with automatic encoding detection.                                                                    |
 | `read_json(filepath)`                       | Read and parse a JSON file, returning a `dict` or `list`.                                                                                   |
 | `save_json(filepath, data, sort_keys=True)` | Serialize `data` to a JSON file with optional key sorting.                                                                                  |
-| `read_toml(filepath)`                       | Read and parse a TOML file, returning a `dict`.                                                                                             |
 | `b64decode(data)`                           | Decode a Base64-encoded string and return the decoded text.                                                                                 |
 
 ### `gitignore` — `.gitignore`-aware filesystem helpers

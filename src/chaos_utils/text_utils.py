@@ -4,7 +4,6 @@ import logging
 from pathlib import Path
 
 import chardet
-import tomllib
 
 logger = logging.getLogger(__name__)
 
@@ -119,27 +118,6 @@ def save_json(filepath: Path, data: dict, sort_keys: bool = True) -> None:
     """
     with open(filepath, mode="w", encoding="utf-8") as f:
         f.write(json.dumps(data, ensure_ascii=False, indent=4, sort_keys=sort_keys))
-
-
-def read_toml(filepath: Path) -> dict | list | None:
-    """
-    Read TOML data from ``filepath``.
-
-    This uses the stdlib :mod:`tomllib` (Python 3.11+) to parse the file.
-    Note that writing TOML is not supported by this helper — use a TOML
-    library that supports serialization if you need to write TOML files.
-
-    Args:
-        filepath: Path to the TOML file.
-
-    Returns:
-        The parsed TOML data (typically a dict).
-    """
-    # This module does not support writing TOML.
-    with open(filepath, mode="rb") as f:
-        data = tomllib.load(f)
-
-    return data
 
 
 def b64decode(data: str) -> str:
